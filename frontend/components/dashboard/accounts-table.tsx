@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
-import { ArrowUpRight, AlertCircle, TrendingUp, Minus, TrendingDown, Calendar, DollarSign, HeartPulse, Ticket, Info } from 'lucide-react'
+import { ArrowUpRight, AlertCircle, TrendingUp, Minus, TrendingDown, Calendar, DollarSign, HeartPulse, Ticket, Info, ShieldAlert, Clock, AlertTriangle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface AccountsTableProps {
   accounts: AccountWithPriority[]
@@ -57,6 +58,68 @@ function getHealthIndicator(score: number | null) {
   if (score >= 70) return { icon: TrendingUp, color: 'text-success', label: 'Healthy' }
   if (score >= 50) return { icon: Minus, color: 'text-warning', label: 'At Risk' }
   return { icon: TrendingDown, color: 'text-destructive', label: 'Critical' }
+}
+
+function getPriorityDefensibility(account: AccountWithPriority): { reason: string; factors: string[] } {
+  const factors: string[] = []
+  const { priorityScore, priorityTier } = account
+  const renewal = getDaysUntilRenewal(account.renewal_date)
+  
+  // Revenue impact factors
+  if (account.contract_value && account.contract_value >= 200000) {
+    factors.push(`High-value contract ($${(account.contract_value / 1000).toFixed(0)}K)`)
+  } else if (account.contract_value && account.contract_value >= 100000) {
+    factors.push(`Significant contract value ($${(account.contract_value / 1000).toFixed(0)}K)`)
+  }
+  
+  // Urgency factors
+  if (renewal.days !== null && renewal.days <= 30) {
+    factors.push(`Renewal imminent (${renewal.days} days)`)
+  } else if (renewal.days !== null && renewal.days <= 60) {
+    factors.push(`Renewal approaching (${renewal.days} days)`)
+  }
+  
+  // Health risk factors
+  if (account.product_usage_score !== null && account.product_usage_score < 40) {
+    factors.push(`Critical usage decline (${account.product_usage_score}%)`)
+  } else if (account.product_usage_score !== null && account.product_usage_score < 60) {
+    factors.push(`Usage below target (${account.product_usage_score}%)`)
+  }
+  
+  if (account.nps_score !== null && account.nps_score <= 5) {
+    factors.push(`Detractor NPS score (${account.nps_score})`)
+  } else if (account.nps_score !== null && account.nps_score <= 7) {
+    factors.push(`Passive NPS score (${account.nps_score})`)
+  }
+  
+  if (account.support_tickets_open && account.support_tickets_open >= 8) {
+    factors.push(`High ticket volume (${account.support_tickets_open} open)`)
+  } else if (account.support_tickets_open && account.support_tickets_open >= 5) {
+    factors.push(`Elevated tickets (${account.support_tickets_open} open)`)
+  }
+  
+  if (account.feature_adoption_pct !== null && account.feature_adoption_pct < 30) {
+    factors.push(`Low feature adoption (${account.feature_adoption_pct}%)`)
+  }
+  
+  // Generate summary reason based on tier
+  let reason = ''
+  switch (priorityTier) {
+    case 'critical':
+      reason = 'Immediate attention required due to high risk of churn combined with significant revenue impact.'
+      break
+    case 'high':
+      reason = 'Elevated priority due to multiple risk indicators or high business value requiring proactive engagement.'
+      break
+    case 'medium':
+      reason = 'Standard priority with moderate risk factors. Monitor and engage per normal cadence.'
+      break
+    case 'low':
+      reason = 'Account is stable with minimal immediate concerns. Maintain relationship.'
+      break
+  }
+  
+  return { reason, factors: factors.slice(0, 4) }
 }
 
 function getQuickInsight(account: AccountWithPriority): { label: string; type: 'warning' | 'info' | 'success' }[] {
@@ -193,34 +256,122 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{account.industry}</TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <Badge variant={getPriorityBadgeVariant(account.priorityTier)}>
-                      {account.priorityTier.charAt(0).toUpperCase() + account.priorityTier.slice(1)}
-                    </Badge>
-                    <div className="flex items-center gap-2">
-                      <Progress 
-                        value={account.priorityScore.overall} 
-                        className="h-1 w-16" 
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {account.priorityScore.overall}
-                      </span>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col gap-1.5 cursor-help">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${
+                            account.priorityTier === 'critical' 
+                              ? 'bg-red-600 text-white shadow-sm shadow-red-200' 
+                              : account.priorityTier === 'high'
+                              ? 'bg-orange-500 text-white shadow-sm shadow-orange-200'
+                              : account.priorityTier === 'medium'
+                              ? 'bg-amber-400 text-amber-900 shadow-sm shadow-amber-100'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {account.priorityTier === 'critical' && <ShieldAlert className="h-3.5 w-3.5" />}
+                            {account.priorityTier.charAt(0).toUpperCase() + account.priorityTier.slice(1)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Progress 
+                              value={account.priorityScore.overall} 
+                              className={`h-1.5 w-16 ${
+                                account.priorityTier === 'critical' ? '[&>div]:bg-red-600' :
+                                account.priorityTier === 'high' ? '[&>div]:bg-orange-500' :
+                                account.priorityTier === 'medium' ? '[&>div]:bg-amber-400' :
+                                '[&>div]:bg-emerald-500'
+                              }`}
+                            />
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {account.priorityScore.overall}
+                            </span>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs p-3 bg-card border border-border">
+                        {(() => {
+                          const defensibility = getPriorityDefensibility(account)
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <ShieldAlert className={`h-4 w-4 ${
+                                  account.priorityTier === 'critical' ? 'text-red-600' :
+                                  account.priorityTier === 'high' ? 'text-orange-500' :
+                                  account.priorityTier === 'medium' ? 'text-amber-500' :
+                                  'text-emerald-500'
+                                }`} />
+                                <span className="font-semibold text-foreground">Why {account.priorityTier}?</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed">{defensibility.reason}</p>
+                              {defensibility.factors.length > 0 && (
+                                <div className="space-y-1 pt-1 border-t border-border">
+                                  <p className="text-xs font-medium text-foreground">Key factors:</p>
+                                  <ul className="space-y-0.5">
+                                    {defensibility.factors.map((factor, i) => (
+                                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                        <span className={`mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                                          account.priorityTier === 'critical' ? 'bg-red-500' :
+                                          account.priorityTier === 'high' ? 'bg-orange-500' :
+                                          account.priorityTier === 'medium' ? 'bg-amber-500' :
+                                          'bg-emerald-500'
+                                        }`} />
+                                        {factor}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="text-foreground font-medium">
                   {formatCurrency(account.contract_value)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1">
-                    {renewal.urgent && <AlertCircle className="h-3 w-3 text-warning" />}
-                    <span className={renewal.urgent ? 'text-warning' : 'text-muted-foreground'}>
-                      {renewal.days !== null ? `${renewal.days}d` : '-'}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(account.renewal_date)}
-                  </span>
+                  {renewal.days !== null && renewal.days <= 30 ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-600 text-white animate-pulse">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        <span className="text-xs font-bold">{renewal.days}d</span>
+                      </div>
+                      <span className="text-xs text-red-600 font-medium">
+                        {formatDate(account.renewal_date)}
+                      </span>
+                    </div>
+                  ) : renewal.days !== null && renewal.days <= 60 ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-orange-500 text-white">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="text-xs font-bold">{renewal.days}d</span>
+                      </div>
+                      <span className="text-xs text-orange-600 font-medium">
+                        {formatDate(account.renewal_date)}
+                      </span>
+                    </div>
+                  ) : renewal.days !== null && renewal.days <= 90 ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-100 text-amber-800">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span className="text-xs font-semibold">{renewal.days}d</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(account.renewal_date)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm text-muted-foreground">
+                        {renewal.days !== null ? `${renewal.days}d` : '-'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(account.renewal_date)}
+                      </span>
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
