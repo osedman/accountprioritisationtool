@@ -14,7 +14,10 @@ import { PortfolioMetricsCards } from './portfolio-metrics'
 import { FilterBar } from './filter-bar'
 import { AccountsTable } from './accounts-table'
 import { PriorityDistributionChart } from './priority-distribution-chart'
+import { PortfolioAIAnalysis } from './portfolio-ai-analysis'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Sparkles } from 'lucide-react'
 
 export function Dashboard() {
   const router = useRouter()
@@ -29,6 +32,9 @@ export function Dashboard() {
   const [selectedTiers, setSelectedTiers] = useState<string[]>([])
   const [sortBy, setSortBy] = useState('priority')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // AI Analysis state
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false)
 
   // Filtered and sorted accounts
   const filteredAccounts = useMemo(() => {
@@ -62,8 +68,25 @@ export function Dashboard() {
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Portfolio Metrics */}
         <section className="mb-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Portfolio Overview</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-muted-foreground">Portfolio Overview</h2>
+            <Button 
+              onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+              variant={showAIAnalysis ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              AI Portfolio Analysis
+            </Button>
+          </div>
           <PortfolioMetricsCards metrics={metrics} />
+          
+          {showAIAnalysis && (
+            <div className="mt-4">
+              <PortfolioAIAnalysis accounts={scoredAccounts} metrics={metrics} />
+            </div>
+          )}
         </section>
 
         {/* Charts and Quick Insights */}

@@ -13,7 +13,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { ArrowUpRight, AlertCircle, TrendingUp, Minus, TrendingDown } from 'lucide-react'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { ArrowUpRight, AlertCircle, TrendingUp, Minus, TrendingDown, Calendar, DollarSign, HeartPulse, Ticket, Info } from 'lucide-react'
 
 interface AccountsTableProps {
   accounts: AccountWithPriority[]
@@ -58,6 +59,47 @@ function getHealthIndicator(score: number | null) {
   return { icon: TrendingDown, color: 'text-destructive', label: 'Critical' }
 }
 
+function getQuickInsight(account: AccountWithPriority): { label: string; type: 'warning' | 'info' | 'success' }[] {
+  const insights: { label: string; type: 'warning' | 'info' | 'success' }[] = []
+  
+  // Renewal urgency
+  const renewal = getDaysUntilRenewal(account.renewal_date)
+  if (renewal.days !== null && renewal.days <= 30) {
+    insights.push({ label: `Renewal in ${renewal.days} days - urgent attention needed`, type: 'warning' })
+  } else if (renewal.days !== null && renewal.days <= 60) {
+    insights.push({ label: `Renewal in ${renewal.days} days - start preparation`, type: 'info' })
+  }
+  
+  // Health concerns
+  if (account.product_usage_score !== null && account.product_usage_score < 50) {
+    insights.push({ label: `Low usage score (${account.product_usage_score}%) - risk of churn`, type: 'warning' })
+  }
+  
+  // Support issues
+  if (account.support_tickets_open && account.support_tickets_open > 5) {
+    insights.push({ label: `${account.support_tickets_open} open tickets - customer may be frustrated`, type: 'warning' })
+  }
+  
+  // NPS
+  if (account.nps_score !== null && account.nps_score < 7) {
+    insights.push({ label: `Low NPS (${account.nps_score}) - requires relationship repair`, type: 'warning' })
+  } else if (account.nps_score !== null && account.nps_score >= 9) {
+    insights.push({ label: `High NPS (${account.nps_score}) - expansion opportunity`, type: 'success' })
+  }
+  
+  // Feature adoption
+  if (account.feature_adoption_pct !== null && account.feature_adoption_pct < 30) {
+    insights.push({ label: `Low feature adoption (${account.feature_adoption_pct}%) - training opportunity`, type: 'info' })
+  }
+  
+  // Good standing
+  if (insights.length === 0) {
+    insights.push({ label: 'Account in good standing', type: 'success' })
+  }
+  
+  return insights.slice(0, 3) // Max 3 insights
+}
+
 export function AccountsTable({ accounts }: AccountsTableProps) {
   const router = useRouter()
 
@@ -90,10 +132,64 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
                 onClick={() => router.push(`/account/${account.id}`)}
               >
                 <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-foreground">{account.account_name}</span>
-                    <span className="text-xs text-muted-foreground">{account.id}</span>
-                  </div>
+                  <HoverCard openDelay={200} closeDelay={100}>
+                    <HoverCardTrigger asChild>
+                      <div className="flex flex-col cursor-pointer group">
+                        <span className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                          {account.account_name}
+                          <Info className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </span>
+                        <span className="text-xs text-muted-foreground">{account.id}</span>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-80" side="right" align="start">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-foreground">{account.account_name}</h4>
+                          <Badge variant={getPriorityBadgeVariant(account.priorityTier)} className="text-xs">
+                            {account.priorityTier}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <DollarSign className="h-3 w-3" />
+                            <span>{formatCurrency(account.contract_value)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>{getDaysUntilRenewal(account.renewal_date).days !== null ? `${getDaysUntilRenewal(account.renewal_date).days}d to renewal` : 'No renewal'}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <HeartPulse className="h-3 w-3" />
+                            <span>Health: {account.product_usage_score ?? 'N/A'}%</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Ticket className="h-3 w-3" />
+                            <span>{account.support_tickets_open ?? 0} open tickets</span>
+                          </div>
+                        </div>
+                        
+                        <div className="border-t border-border pt-2 space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">Quick Insights</p>
+                          {getQuickInsight(account).map((insight, i) => (
+                            <div 
+                              key={i} 
+                              className={`text-xs p-1.5 rounded ${
+                                insight.type === 'warning' 
+                                  ? 'bg-destructive/10 text-destructive' 
+                                  : insight.type === 'success' 
+                                  ? 'bg-chart-2/10 text-chart-2' 
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {insight.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{account.industry}</TableCell>
                 <TableCell>
