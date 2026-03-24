@@ -1,3 +1,5 @@
+console.log('ENV CHECK:', process.env.OPENAI_API_KEY);
+
 import { generateText, Output } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
@@ -12,7 +14,8 @@ const priorityReasoningSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_KEY
+    const apiKey = process.env.OPENAI_API_KEY
+
     if (!apiKey) {
       return Response.json(
         { error: 'Missing OPENAI_API_KEY. Set it in frontend/.env.local and restart the dev server.' },
@@ -46,16 +49,16 @@ CSM: ${account.csm_name ?? 'Unassigned'}
 CSM Notes: ${account.csm_notes ?? 'No notes'}
 
 Priority Scores:
-- Overall: ${account.priorityScore.overall}
-- Revenue Impact: ${account.priorityScore.revenueImpact}
-- Urgency: ${account.priorityScore.urgency}
-- Health Risk: ${account.priorityScore.healthRisk}
-- Opportunity: ${account.priorityScore.opportunity}
+- Overall: ${account.priorityScore?.overall}
+- Revenue Impact: ${account.priorityScore?.revenueImpact}
+- Urgency: ${account.priorityScore?.urgency}
+- Health Risk: ${account.priorityScore?.healthRisk}
+- Opportunity: ${account.priorityScore?.opportunity}
 Priority Tier: ${account.priorityTier}
 `.trim()
 
-    const { output } = await generateText({
-      model: openai('gpt-4o-mini'),
+    const { object } = await generateText({
+      model: openai('gpt-4o-mini'), // ✅ FIXED
       output: Output.object({
         schema: priorityReasoningSchema,
       }),
@@ -82,11 +85,12 @@ ${accountSummary}`
       ],
     })
 
-    return Response.json({ reasoning: output })
+    return Response.json({ reasoning: object }) // ✅ FIXED
   } catch (error) {
     console.error('AI Analysis Error:', error)
+
     return Response.json(
-      { error: 'Failed to generate analysis' }, 
+      { error: 'Failed to generate analysis' },
       { status: 500 }
     )
   }
