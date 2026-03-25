@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { AIAnalysisPanel } from './ai-analysis-panel'
 import { DecisionRecorder } from './decision-recorder'
+import { createTaskFromDecision } from '@/lib/supabase-tasks'
 import { Decision } from '@/lib/types'
 
 interface AccountDetailProps {
@@ -86,15 +87,21 @@ export function AccountDetail({ accountId }: AccountDetailProps) {
   }
 
   const handlePreferredActionSelected = (actionText: string) => {
+    const reasoning = 'AI-recommended preferred action from analysis panel.'
     const decision: Decision = {
       id: `ai-pref-${Date.now()}`,
       accountId: account.id,
       action: actionText,
-      reasoning: 'AI-recommended preferred action from analysis panel.',
+      reasoning,
       createdAt: new Date().toISOString(),
       createdBy: user?.name ?? 'AI Assistant',
     }
-    setDecisions(prev => [decision, ...prev])
+    setDecisions((prev) => [decision, ...prev])
+    void createTaskFromDecision(account.id, actionText, reasoning).then(({ error }) => {
+      if (error) {
+        console.warn('[tasks] Preferred action:', error.message)
+      }
+    })
   }
 
   const getHealthIcon = (score: number | null) => {

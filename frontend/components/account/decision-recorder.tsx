@@ -15,6 +15,7 @@ import {
 import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
 import { Spinner } from '@/components/ui/spinner'
 import { ClipboardList, CheckCircle2 } from 'lucide-react'
+import { createTaskFromDecision } from '@/lib/supabase-tasks'
 
 interface DecisionRecorderProps {
   account: AccountWithPriority
@@ -40,6 +41,7 @@ export function DecisionRecorder({ account, userName, onDecisionSaved }: Decisio
   const [reasoning, setReasoning] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [taskSyncWarning, setTaskSyncWarning] = useState<string | null>(null)
 
   const handleSave = async () => {
     if (!action || !reasoning.trim()) return
@@ -56,6 +58,16 @@ export function DecisionRecorder({ account, userName, onDecisionSaved }: Decisio
       reasoning: reasoning.trim(),
       createdAt: new Date().toISOString(),
       createdBy: userName
+    }
+
+    setTaskSyncWarning(null)
+    const { error: taskErr } = await createTaskFromDecision(
+      account.id,
+      decision.action,
+      decision.reasoning,
+    )
+    if (taskErr) {
+      setTaskSyncWarning(taskErr.message)
     }
 
     onDecisionSaved(decision)
@@ -76,9 +88,16 @@ export function DecisionRecorder({ account, userName, onDecisionSaved }: Decisio
       </CardHeader>
       <CardContent>
         {showSuccess ? (
-          <div className="text-center py-6">
+          <div className="text-center py-6 space-y-2">
             <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-3" />
             <p className="text-sm text-success">Decision recorded successfully!</p>
+            {taskSyncWarning ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400 px-2">
+                Task not added: {taskSyncWarning}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Also added to Tasks.</p>
+            )}
           </div>
         ) : (
           <FieldGroup>

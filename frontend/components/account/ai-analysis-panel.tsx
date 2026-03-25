@@ -16,14 +16,12 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
+import { createTasksFromAiAnalysis } from '@/lib/supabase-tasks'
 
 interface AIAnalysisPanelProps {
   account: AccountWithPriority
   onPreferredActionSelected?: (actionText: string) => void
 }
-
-const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://127.0.0.1:8000'
 
 export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalysisPanelProps) {
   const [analysis, setAnalysis] = useState<PriorityReasoning | null>(null)
@@ -40,6 +38,7 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
     opportunities: true,
     actions: true
   })
+  const [taskAutocreateMessage, setTaskAutocreateMessage] = useState<string | null>(null)
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
@@ -48,6 +47,7 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
   const runAnalysis = async () => {
     setSavedAnalysisId(null)
     setPreferredActionIndex(null)
+    setTaskAutocreateMessage(null)
     setIsLoading(true)
     setError(null)
 
@@ -72,6 +72,26 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
       if (typeof reasoning.preferredActionIndex === 'number') {
         setPreferredActionIndex(reasoning.preferredActionIndex)
       }
+
+      setTaskAutocreateMessage(null)
+      const { created, error: taskErr, skippedNoAccount } = await createTasksFromAiAnalysis(
+        account.id,
+        account.account_name,
+        reasoning,
+      )
+      if (taskErr) {
+        setTaskAutocreateMessage(
+          `Analysis ready. Tasks were not synced: ${taskErr.message}`,
+        )
+      } else if (skippedNoAccount && reasoning.recommendedActions?.length) {
+        setTaskAutocreateMessage(
+          'Analysis ready. No Supabase account matched this record — add an accounts row with the same id (or a default account) to auto-create tasks.',
+        )
+      } else if (created > 0) {
+        setTaskAutocreateMessage(
+          `Created ${created} task${created === 1 ? '' : 's'} from recommended actions (see Tasks page).`,
+        )
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate AI analysis. Please try again.')
     } finally {
@@ -94,7 +114,7 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
         },
       }
 
-      const response = await fetch(`${BACKEND_BASE_URL}/api/analyses`, {
+      const response = await fetch('/api/analyses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -141,7 +161,8 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
       if (!id) {
         id = await saveAnalysis()
       }
-      const url = `${BACKEND_BASE_URL}/api/analyses/${id}/pdf`
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const url = `${origin}/api/analyses/${id}/pdf`
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to download analysis PDF')
@@ -244,6 +265,11 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
 
         {analysis && !isLoading && (
           <div className="space-y-4">
+            {taskAutocreateMessage && (
+              <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg px-3 py-2">
+                {taskAutocreateMessage}
+              </p>
+            )}
             {/* Summary */}
             <div>
               <button 
