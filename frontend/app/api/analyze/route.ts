@@ -1,5 +1,3 @@
-console.log('ENV CHECK:', process.env.OPENAI_API_KEY);
-
 import { generateText, Output } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
@@ -57,7 +55,7 @@ Priority Scores:
 Priority Tier: ${account.priorityTier}
 `.trim()
 
-    const { object } = await generateText({
+    const { output } = await generateText({
       model: openai('gpt-4o-mini'), // ✅ FIXED
       output: Output.object({
         schema: priorityReasoningSchema,
@@ -85,7 +83,7 @@ ${accountSummary}`
       ],
     })
 
-    return Response.json({ reasoning: object }) // ✅ FIXED
+    return Response.json({ reasoning: output })
   } catch (error) {
     console.error('AI Analysis Error:', error)
 

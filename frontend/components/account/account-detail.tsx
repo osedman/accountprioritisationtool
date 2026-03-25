@@ -6,7 +6,7 @@ import { accountsData } from '@/lib/data/accounts'
 import { scoreAccount } from '@/lib/priority-scoring'
 import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
@@ -20,7 +20,6 @@ import {
   TrendingDown,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
   Ticket,
   Clock,
   Heart,
