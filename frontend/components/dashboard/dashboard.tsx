@@ -11,6 +11,7 @@ import {
 } from '@/lib/priority-scoring'
 import { DashboardHeader } from './dashboard-header'
 import { PortfolioMetricsCards } from './portfolio-metrics'
+import { PortfolioInsights } from './portfolio-insights'
 import { FilterBar } from './filter-bar'
 import { AccountsTable } from './accounts-table'
 import { PriorityDistributionChart } from './priority-distribution-chart'
@@ -64,6 +65,12 @@ export function Dashboard() {
         <section className="mb-6">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Portfolio Overview</h2>
           <PortfolioMetricsCards metrics={metrics} />
+        </section>
+
+        {/* Insights */}
+        <section className="mb-6">
+          <h2 className="text-sm font-medium text-muted-foreground mb-3">Insights</h2>
+          <PortfolioInsights accounts={scoredAccounts} />
         </section>
 
         {/* Charts and Quick Insights */}

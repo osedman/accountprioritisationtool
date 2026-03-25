@@ -13,22 +13,22 @@ export function PriorityDistributionChart({ accounts }: PriorityDistributionChar
     { 
       name: 'Critical', 
       value: accounts.filter(a => a.priorityTier === 'critical').length,
-      color: 'hsl(var(--destructive))'
+      color: 'oklch(var(--destructive))'
     },
     { 
       name: 'High', 
       value: accounts.filter(a => a.priorityTier === 'high').length,
-      color: 'hsl(var(--warning))'
+      color: 'oklch(var(--warning))'
     },
     { 
       name: 'Medium', 
       value: accounts.filter(a => a.priorityTier === 'medium').length,
-      color: 'hsl(var(--chart-1))'
+      color: 'oklch(var(--chart-1))'
     },
     { 
       name: 'Low', 
       value: accounts.filter(a => a.priorityTier === 'low').length,
-      color: 'hsl(var(--chart-2))'
+      color: 'oklch(var(--chart-2))'
     },
   ].filter(d => d.value > 0)
 
@@ -56,10 +56,10 @@ export function PriorityDistributionChart({ accounts }: PriorityDistributionChar
               </Pie>
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: 'oklch(var(--card))',
+                  border: '1px solid oklch(var(--border))',
                   borderRadius: '8px',
-                  color: 'hsl(var(--foreground))'
+                  color: 'oklch(var(--foreground))'
                 }}
               />
               <Legend 

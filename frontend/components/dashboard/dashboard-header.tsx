@@ -1,6 +1,7 @@
 "use client"
 
 import { useAuth } from '@/lib/auth-context'
+import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, Moon, Sun, User } from 'lucide-react'
 
 export function DashboardHeader() {
   const { user, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
 
   const initials = user?.name
     .split(' ')
@@ -48,6 +50,17 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
