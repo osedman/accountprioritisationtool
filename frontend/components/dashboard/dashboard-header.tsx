@@ -1,5 +1,6 @@
 "use client"
 
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, Moon, Sun, User } from 'lucide-react'
+import { ListTodo, LogOut, Moon, Sun, User } from 'lucide-react'
 
 export function DashboardHeader() {
   const { user, logout } = useAuth()
@@ -50,6 +51,13 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/tasks" className="flex items-center gap-2">
+              <ListTodo className="h-4 w-4" />
+              <span className="hidden sm:inline">Tasks</span>
+            </Link>
+          </Button>
+
           <Button
             type="button"
             variant="ghost"
