@@ -1,2 +1,19 @@
+.DS_Store
+
+# Python
+__pycache__/
 backend/__pycache__/
+*.py[cod]
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Env files (never commit secrets)
+.env*
 frontend/.env.local
+
+# Local backup folder (Vite starter backup)
+Frontend_vite_backup_20260317_144225/
