@@ -65,6 +65,7 @@ export function DecisionRecorder({ account, userName, onDecisionSaved }: Decisio
       account.id,
       decision.action,
       decision.reasoning,
+      account.account_name,
     )
     if (taskErr) {
       setTaskSyncWarning(taskErr.message)

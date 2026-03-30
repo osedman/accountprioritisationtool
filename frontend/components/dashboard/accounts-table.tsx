@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ArrowUpRight, AlertCircle, TrendingUp, Minus, TrendingDown } from 'lucide-react'
+import { GenerateAiTaskButton } from '@/components/dashboard/generate-ai-task-button'
 
 interface AccountsTableProps {
   accounts: AccountWithPriority[]
@@ -74,7 +75,7 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
             <TableHead className="text-muted-foreground">Health</TableHead>
             <TableHead className="text-muted-foreground">Tickets</TableHead>
             <TableHead className="text-muted-foreground">CSM</TableHead>
-            <TableHead className="text-right text-muted-foreground">Action</TableHead>
+            <TableHead className="text-right text-muted-foreground">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -146,16 +147,19 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
                   {account.csm_name?.split(' ')[0] ?? '-'}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      router.push(`/account/${account.id}`)
-                    }}
-                  >
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <GenerateAiTaskButton account={account} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/account/${account.id}`)
+                      }}
+                    >
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )

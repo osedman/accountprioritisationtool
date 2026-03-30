@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { accountsData } from '@/lib/data/accounts'
+import { useMergedAccounts } from '@/hooks/use-merged-accounts'
 import { scoreAccount } from '@/lib/priority-scoring'
 import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
@@ -57,14 +57,15 @@ function getDaysUntilRenewal(dateStr: string | null): number | null {
 export function AccountDetail({ accountId }: AccountDetailProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const accountsRaw = useMergedAccounts()
   const [decisions, setDecisions] = useState<Decision[]>([])
 
   // Find and score the account
   const account = useMemo(() => {
-    const rawAccount = accountsData.find(a => a.id === accountId)
+    const rawAccount = accountsRaw.find((a) => a.id === accountId)
     if (!rawAccount) return null
     return scoreAccount(rawAccount)
-  }, [accountId])
+  }, [accountId, accountsRaw])
 
   if (!account) {
     return (
@@ -97,7 +98,7 @@ export function AccountDetail({ accountId }: AccountDetailProps) {
       createdBy: user?.name ?? 'AI Assistant',
     }
     setDecisions((prev) => [decision, ...prev])
-    void createTaskFromDecision(account.id, actionText, reasoning).then(({ error }) => {
+    void createTaskFromDecision(account.id, actionText, reasoning, account.account_name).then(({ error }) => {
       if (error) {
         console.warn('[tasks] Preferred action:', error.message)
       }

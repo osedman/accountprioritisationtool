@@ -17,6 +17,7 @@ import {
   ChevronUp
 } from 'lucide-react'
 import { createTasksFromAiAnalysis } from '@/lib/supabase-tasks'
+import { saveAccountAnalysisToSupabase } from '@/lib/analysis-supabase'
 
 interface AIAnalysisPanelProps {
   account: AccountWithPriority
@@ -29,7 +30,7 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
   const [isSaving, setIsSaving] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [savedAnalysisId, setSavedAnalysisId] = useState<number | null>(null)
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null)
   const [preferredActionIndex, setPreferredActionIndex] = useState<number | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     summary: true,
@@ -99,39 +100,21 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
     }
   }
 
-  const saveAnalysis = async (): Promise<number> => {
+  const saveAnalysis = async (): Promise<string> => {
     if (!analysis) {
       throw new Error('No analysis to save')
     }
     setIsSaving(true)
     setError(null)
     try {
-      const payload = {
-        account_key: account.id,
-        analysis: {
-          ...analysis,
-          preferredActionIndex: preferredActionIndex ?? undefined,
-        },
-      }
-
-      const response = await fetch('/api/analyses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const maybeJson = await response.json().catch(() => null)
-        const message =
-          (maybeJson && typeof maybeJson.error === 'string' && maybeJson.error) ||
-          `Failed to save analysis (${response.status})`
-        throw new Error(message)
-      }
-
-      const data = await response.json()
-      const id = typeof data.id === 'number' ? data.id : Number(data.id)
-      if (!Number.isFinite(id)) {
-        throw new Error('Invalid analysis id returned from server')
+      const { id, error: saveErr } = await saveAccountAnalysisToSupabase(
+        account.id,
+        account.account_name,
+        analysis,
+        preferredActionIndex,
+      )
+      if (saveErr || !id) {
+        throw saveErr ?? new Error('Failed to save analysis')
       }
       setSavedAnalysisId(id)
       return id
@@ -157,13 +140,28 @@ export function AIAnalysisPanel({ account, onPreferredActionSelected }: AIAnalys
     setIsDownloading(true)
     setError(null)
     try {
-      let id = savedAnalysisId
-      if (!id) {
-        id = await saveAnalysis()
+      const response = await fetch('/api/analysis/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountName: account.account_name,
+          accountId: account.id,
+          analysis,
+          preferredActionIndex: preferredActionIndex ?? undefined,
+        }),
+      })
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => null)
+        const msg =
+          errJson && typeof errJson.error === 'string'
+            ? errJson.error
+            : `PDF failed (${response.status})`
+        throw new Error(msg)
       }
-      const origin = typeof window !== 'undefined' ? window.location.origin : ''
-      const url = `${origin}/api/analyses/${id}/pdf`
-      window.open(url, '_blank', 'noopener,noreferrer')
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      window.open(objectUrl, '_blank', 'noopener,noreferrer')
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to download analysis PDF')
     } finally {

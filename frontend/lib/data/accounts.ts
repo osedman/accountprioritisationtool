@@ -1,7 +1,8 @@
 import { Account } from '../types'
 
-// Raw CSV data converted to TypeScript
-export const accountsData: Account[] = [
+// Raw CSV data converted to TypeScript.
+// We apply a small normalization step below so demo dates can be shifted together.
+const rawAccountsData: Account[] = [
   {
     id: "ACC001",
     account_name: "Acme Corp",
@@ -1143,3 +1144,16 @@ export const accountsData: Account[] = [
     csm_notes: "Portfolio management features heavily used. Deal flow tracking critical. Referrals to portfolio companies possible."
   }
 ]
+
+export const accountsData: Account[] = rawAccountsData.map((a) => {
+  const renewal_date =
+    typeof a.renewal_date === 'string' ? a.renewal_date.replace(/^20\\d\\d-/, '2026-') : a.renewal_date
+  const last_contact_date =
+    typeof a.last_contact_date === 'string' ? a.last_contact_date.replace(/^20\\d\\d-/, '2026-') : a.last_contact_date
+
+  return {
+    ...a,
+    renewal_date,
+    last_contact_date,
+  }
+})

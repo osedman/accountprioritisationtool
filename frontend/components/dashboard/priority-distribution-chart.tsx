@@ -10,27 +10,27 @@ interface PriorityDistributionChartProps {
 
 export function PriorityDistributionChart({ accounts }: PriorityDistributionChartProps) {
   const distribution = [
-    { 
-      name: 'Critical', 
-      value: accounts.filter(a => a.priorityTier === 'critical').length,
-      color: 'oklch(var(--destructive))'
+    {
+      name: 'Critical',
+      value: accounts.filter((a) => a.priorityTier === 'critical').length,
+      color: '#991b1b',
     },
-    { 
-      name: 'High', 
-      value: accounts.filter(a => a.priorityTier === 'high').length,
-      color: 'oklch(var(--warning))'
+    {
+      name: 'High',
+      value: accounts.filter((a) => a.priorityTier === 'high').length,
+      color: '#dc2626',
     },
-    { 
-      name: 'Medium', 
-      value: accounts.filter(a => a.priorityTier === 'medium').length,
-      color: 'oklch(var(--chart-1))'
+    {
+      name: 'Medium',
+      value: accounts.filter((a) => a.priorityTier === 'medium').length,
+      color: '#ea580c',
     },
-    { 
-      name: 'Low', 
-      value: accounts.filter(a => a.priorityTier === 'low').length,
-      color: 'oklch(var(--chart-2))'
+    {
+      name: 'Low',
+      value: accounts.filter((a) => a.priorityTier === 'low').length,
+      color: '#16a34a',
     },
-  ].filter(d => d.value > 0)
+  ].filter((d) => d.value > 0)
 
   return (
     <Card className="border-border bg-card">
@@ -54,12 +54,12 @@ export function PriorityDistributionChart({ accounts }: PriorityDistributionChar
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'oklch(var(--card))',
-                  border: '1px solid oklch(var(--border))',
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  color: 'oklch(var(--foreground))'
+                  color: 'hsl(var(--foreground))',
                 }}
               />
               <Legend 

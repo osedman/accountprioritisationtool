@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { accountsData } from '@/lib/data/accounts'
-import { 
-  scoreAndRankAccounts, 
-  calculatePortfolioMetrics, 
+import {
+  scoreAndRankAccounts,
+  calculatePortfolioMetrics,
   getUniqueIndustries,
-  filterAccounts 
+  filterAccounts,
 } from '@/lib/priority-scoring'
+import { useMergedAccounts } from '@/hooks/use-merged-accounts'
 import { DashboardHeader } from './dashboard-header'
 import { PortfolioMetricsCards } from './portfolio-metrics'
 import { PortfolioInsights } from './portfolio-insights'
@@ -16,33 +16,60 @@ import { FilterBar } from './filter-bar'
 import { AccountsTable } from './accounts-table'
 import { PriorityDistributionChart } from './priority-distribution-chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const
 
 export function Dashboard() {
   const router = useRouter()
+  const accountsRaw = useMergedAccounts()
 
-  // Score all accounts once
-  const scoredAccounts = useMemo(() => scoreAndRankAccounts(accountsData), [])
-  const industries = useMemo(() => getUniqueIndustries(accountsData), [])
-  
-  // Filter state
+  const scoredAccounts = useMemo(() => scoreAndRankAccounts(accountsRaw), [accountsRaw])
+  const industries = useMemo(() => getUniqueIndustries(accountsRaw), [accountsRaw])
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [selectedTiers, setSelectedTiers] = useState<string[]>([])
   const [sortBy, setSortBy] = useState('priority')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  // Filtered and sorted accounts
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10)
+
   const filteredAccounts = useMemo(() => {
     return filterAccounts(scoredAccounts, {
       industry: selectedIndustries,
       priorityTier: selectedTiers,
       search: searchQuery,
       sortBy: sortBy as 'priority' | 'revenue' | 'renewal' | 'health',
-      sortOrder
+      sortOrder,
     })
   }, [scoredAccounts, selectedIndustries, selectedTiers, searchQuery, sortBy, sortOrder])
 
-  // Portfolio metrics (based on all accounts, not filtered)
+  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / pageSize))
+
+  const paginatedAccounts = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredAccounts.slice(start, start + pageSize)
+  }, [filteredAccounts, page, pageSize])
+
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, selectedIndustries, selectedTiers, sortBy, sortOrder, pageSize, filteredAccounts.length])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
   const metrics = useMemo(() => calculatePortfolioMetrics(scoredAccounts), [scoredAccounts])
 
   const clearFilters = () => {
@@ -53,30 +80,29 @@ export function Dashboard() {
     setSortOrder('desc')
   }
 
-  // Get top 5 accounts needing attention
   const topPriorityAccounts = scoredAccounts.slice(0, 5)
+
+  const rangeStart = filteredAccounts.length === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(page * pageSize, filteredAccounts.length)
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
-      
+
       <main className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Portfolio Metrics */}
         <section className="mb-6">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Portfolio Overview</h2>
           <PortfolioMetricsCards metrics={metrics} />
         </section>
 
-        {/* Insights */}
         <section className="mb-6">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Insights</h2>
           <PortfolioInsights accounts={scoredAccounts} />
         </section>
 
-        {/* Charts and Quick Insights */}
         <section className="mb-6 grid gap-4 md:grid-cols-3">
           <PriorityDistributionChart accounts={scoredAccounts} />
-          
+
           <Card className="md:col-span-2 border-border bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -104,13 +130,15 @@ export function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        account.priorityTier === 'critical' 
-                          ? 'bg-destructive/20 text-destructive' 
-                          : account.priorityTier === 'high'
-                          ? 'bg-warning/20 text-warning'
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          account.priorityTier === 'critical'
+                            ? 'bg-destructive/20 text-destructive'
+                            : account.priorityTier === 'high'
+                              ? 'bg-warning/20 text-warning'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
                         {account.priorityTier.charAt(0).toUpperCase() + account.priorityTier.slice(1)}
                       </span>
                     </div>
@@ -121,14 +149,31 @@ export function Dashboard() {
           </Card>
         </section>
 
-        {/* Filters and Table */}
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-medium text-muted-foreground">
               All Accounts ({filteredAccounts.length})
             </h2>
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <span className="hidden sm:inline">Rows per page</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => setPageSize(Number(v) as (typeof PAGE_SIZE_OPTIONS)[number])}
+              >
+                <SelectTrigger className="w-[110px] h-8 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          
+
           <FilterBar
             industries={industries}
             selectedIndustries={selectedIndustries}
@@ -145,7 +190,36 @@ export function Dashboard() {
           />
 
           <div className="mt-4">
-            <AccountsTable accounts={filteredAccounts} />
+            <AccountsTable accounts={paginatedAccounts} />
+          </div>
+
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              {filteredAccounts.length === 0
+                ? 'No accounts to show'
+                : `Showing ${rangeStart}–${rangeEnd} of ${filteredAccounts.length}`}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </section>
       </main>

@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { ListTodo, LogOut, Moon, Sun, User } from 'lucide-react'
+import { BarChart3, FileUp, ListTodo, LogOut, Moon, Sun, User } from 'lucide-react'
 
 export function DashboardHeader() {
   const { user, logout } = useAuth()
@@ -55,6 +55,20 @@ export function DashboardHeader() {
             <Link href="/tasks" className="flex items-center gap-2">
               <ListTodo className="h-4 w-4" />
               <span className="hidden sm:inline">Tasks</span>
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/insights" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Insights</span>
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/import" className="flex items-center gap-2">
+              <FileUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Import</span>
             </Link>
           </Button>
 
